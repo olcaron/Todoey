@@ -11,31 +11,19 @@ import UIKit
 class TodoListViewController: UITableViewController {
     
     var itemArray = [Item]()
-    let defaults =  UserDefaults.standard
+    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Items.plist")
 
+    //MARK: - viewDidLoad
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
         
-        let newItem = Item()
-        newItem.title = "Find Mike"
-        itemArray.append(newItem)
+        print(dataFilePath!)
         
-        let newItem2 = Item()
-        newItem2.title = "Buy eggos"
-        itemArray.append(newItem2)
-        
-        let newItem3 = Item()
-        newItem3.title = "Destroy Demogorgon"
-        itemArray.append(newItem3)
-        
-        
-        if let items = defaults.array(forKey: "TodoListArray") as? [Item] {
-            itemArray = items
-        }// fin du if let
+        loadItems()
     }// fin de viewDidLoad
     
-    //MARK - Tableview Datasource Methods
+    //MARK: - Tableview Datasource Methods
     
     //on intialise les cellules et on leur atribut un modele de cellule
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -58,23 +46,22 @@ class TodoListViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         
         return itemArray.count
-        
     }// fin de numbersOfRowInSection
     
-    //MARK - Table view Delegate ( the one that gets fired when any cell is cliqued in the tableview)
+    
+    //MARK: - Table view Delegate ( the one that gets fired when any cell is cliqued in the tableview)
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        //print(itemArray[indexPath.row])
         
         // on change la valeur de itemArray.done a l'opposé de la valeur présente p.ex on change true a false
         itemArray[indexPath.row].done = !itemArray[indexPath.row].done
         
-        // on rafraiche les données du table view
-        tableView.reloadData()
+        //on sauvegarde la propriété coché de la cellule dans items.plist
+        saveItems()
         
         tableView.deselectRow(at: indexPath, animated: true)
     }// fin de didSelectRow
     
-   //MARK - Add New Items
+    //MARK: - Add New Items
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
         
         var textField = UITextField()
@@ -89,9 +76,8 @@ class TodoListViewController: UITableViewController {
             newItem.title = textField.text!
             
             self.itemArray.append(newItem)
-            self.defaults.set(self.itemArray, forKey: "TodoListArray")
             
-            self.tableView.reloadData()
+            self.saveItems()
         }// fin du closure
         
         alert.addTextField { (alertTextField) in
@@ -103,4 +89,35 @@ class TodoListViewController: UITableViewController {
         
         present(alert, animated: true, completion: nil)
     } // fin de add button pressed
+    
+    //MARK: - Model Manipulation Methods
+    // fonction ou l'on sauvegarde les donnés du itemArray dans Items.plist
+    func saveItems() {
+        
+        let encoder = PropertyListEncoder()
+        
+        do {
+            let data = try encoder.encode(itemArray)
+            try data.write(to: dataFilePath!)
+        } catch {
+            print("Error encoding item array \(error)")
+        }// fin du block do catch
+        
+        // on rafraiche les données du table view
+        self.tableView.reloadData()
+    }// fin de saveItems
+    
+    func loadItems() {
+        
+        if let data = try? Data(contentsOf: dataFilePath!) {
+            let decoder = PropertyListDecoder()
+            do {
+                itemArray = try decoder.decode([Item].self, from: data)
+            } catch {
+                print("Error decoding item Array : \(error)")
+            } // fin du do catch
+        }// fin du if let
+        
+    }// fin de loadItems
+    
 }// fin de TodoListViewController
